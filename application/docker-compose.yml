@@ -8,8 +8,6 @@ services:
       - UVICORN_WORKERS=4
       - ROOT_PATH=/api
       - PORT=3000
-    ports:
-      - 3000:3000
     depends_on:
       - redis
     networks:
@@ -23,8 +21,6 @@ services:
       - LINK_TTL_SECONDS=86400
       - UVICORN_WORKERS=4
       - PORT=3001
-    ports:
-      - 3001:3001
     depends_on:
       - redis
     networks:
@@ -36,8 +32,6 @@ services:
       - redis-data:/data
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
     command: redis-server /usr/local/etc/redis/redis.conf
-    ports:
-      - 6379:6379
     networks:
       - app-network
 

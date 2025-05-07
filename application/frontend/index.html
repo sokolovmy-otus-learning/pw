@@ -5,21 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>URL Shortener</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234285F4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' transform='rotate(45)'%3E%3Cpath d='M15 7h3a5 5 0 0 1 5 5 5 5 0 0 1-5 5h-3m-6 0H6a5 5 0 0 1-5-5 5 5 0 0 1 5-5h3'/%3E%3Cpath d='M8 12h8'/%3E%3C/svg%3E">
+    <style>
+        body, input, button, a, p, span {
+            font-family: 'Roboto', sans-serif;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">URL Shortener</h1>
+<body class="bg-[#F1F3F4] dark:bg-[#202124] flex items-center justify-center min-h-screen">
+    <div class="bg-white dark:bg-[#303134] p-8 rounded-lg shadow-lg w-[90%]">
+        <h1 class="text-2xl font-bold text-center text-[#202124] dark:text-[#E8EAED] mb-6">URL Shortener</h1>
         <form id="shorten-form" class="space-y-4">
             <input
                 type="url"
                 id="url-input"
                 placeholder="Enter your URL"
-                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full p-3 border border-[#DADCE0] dark:border-[#5F6368] rounded-lg bg-white dark:bg-[#303134] text-[#5F6368] dark:text-[#E8EAED] focus:outline-none focus:ring-2 focus:ring-[#4285F4] dark:focus:ring-[#8AB4F8]"
                 required
             >
             <button
                 type="submit"
-                class="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition"
+                class="w-full bg-[#4285F4] dark:bg-[#8AB4F8] text-white dark:text-[#202124] p-3 rounded-lg hover:bg-[#1967D2] dark:hover:bg-[#4285F4] transition font-bold"
             >
                 Shorten URL
             </button>
@@ -47,16 +54,43 @@
                 const data = await response.json();
                 const shortUrl = `${window.location.origin}${data.shortUrl}`;
                 resultDiv.innerHTML = `
-                    <p class="text-green-600">Short URL created!</p>
-                    <a href="${shortUrl}" class="text-blue-500 underline" target="_blank">${shortUrl}</a>
-                    <button onclick="navigator.clipboard.writeText('${shortUrl}')" class="mt-2 text-sm text-gray-600 hover:text-gray-800">
-                        Copy to Clipboard
-                    </button>
+                    <p class="text-[#FBBC05] dark:text-[#FDD663] font-medium">Short URL created!</p>
+                    <div class="bg-[#F1F3F4] dark:bg-[#303134] p-2 rounded-lg inline-flex items-center space-x-2">
+                        <a href="${shortUrl}" class="text-[#5F6368] dark:text-[#E8EAED] no-underline hover:text-[#202124] dark:hover:text-[#FFFFFF] hover:border-b hover:border-[#4285F4] dark:hover:border-[#8AB4F8]" target="_blank">${shortUrl}</a>
+                        <div class="relative group">
+                            <button onclick="copyToClipboard('${shortUrl}', this)" class="text-[#4285F4] dark:text-[#8AB4F8] hover:text-[#1967D2] dark:hover:text-[#4285F4]">
+                                <svg id="copy-icon" class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                            <span class="absolute left-1/2 transform -translate-x-1/2 -top-10 bg-[#202124] dark:bg-[#5F6368] text-white dark:text-[#E8EAED] text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Copy to Clipboard</span>
+                        </div>
+                    </div>
                 `;
             } catch (error) {
-                resultDiv.innerHTML = `<p class="text-red-600">Error: ${error.message}</p>`;
+                resultDiv.innerHTML = `<p class="text-[#EA4335] dark:text-[#F28B82] font-medium">Error: ${error.message}</p>`;
             }
         });
+
+        function copyToClipboard(url, button) {
+            navigator.clipboard.writeText(url).then(() => {
+                const icon = button.querySelector('svg');
+                icon.innerHTML = `
+                    <path d="M5 13l4 4L19 7"></path>
+                `;
+                icon.classList.remove('w-5', 'h-5');
+                icon.classList.add('w-5', 'h-5', 'text-[#FBBC05]', 'dark:text-[#FDD663]');
+                setTimeout(() => {
+                    icon.innerHTML = `
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    `;
+                    icon.classList.remove('text-[#FBBC05]', 'dark:text-[#FDD663]');
+                    icon.classList.add('w-5', 'h-5', 'text-[#4285F4]', 'dark:text-[#8AB4F8]');
+                }, 2000);
+            });
+        }
     </script>
 </body>
 </html>

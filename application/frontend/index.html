@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">URL Shortener</h1>
+        <form id="shorten-form" class="space-y-4">
+            <input
+                type="url"
+                id="url-input"
+                placeholder="Enter your URL"
+                class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+            >
+            <button
+                type="submit"
+                class="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition"
+            >
+                Shorten URL
+            </button>
+        </form>
+        <div id="result" class="mt-4 text-center"></div>
+    </div>
+
+    <script>
+        document.getElementById('shorten-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const urlInput = document.getElementById('url-input').value;
+            const resultDiv = document.getElementById('result');
+
+            try {
+                const response = await fetch('/api/shorten', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to shorten URL');
+                }
+
+                const data = await response.json();
+                const shortUrl = `${window.location.origin}${data.shortUrl}`;
+                resultDiv.innerHTML = `
+                    <p class="text-green-600">Short URL created!</p>
+                    <a href="${shortUrl}" class="text-blue-500 underline" target="_blank">${shortUrl}</a>
+                    <button onclick="navigator.clipboard.writeText('${shortUrl}')" class="mt-2 text-sm text-gray-600 hover:text-gray-800">
+                        Copy to Clipboard
+                    </button>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="text-red-600">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

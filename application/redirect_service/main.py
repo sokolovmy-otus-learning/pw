@@ -1,24 +1,27 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
-import redis.asyncio as redis
-import os
-
+import aerospike
 app = FastAPI()
 
-# Подключение к Redis
-redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
-
-# Получение TTL из переменной окружения (по умолчанию 86400 секунд = 1 день)
+# Подключение к Aerospike
+config = {
+    'hosts': [(os.getenv('AEROSPIKE_HOST', 'aerospike'), 3000)],
+    'policies': {'timeout': 1000}
+}
+client = aerospike.client(config).connect()
 LINK_TTL_SECONDS = int(os.getenv('LINK_TTL_SECONDS', 86400))
 
-# Редирект по shortId
 @app.get("/{shortId}")
 async def redirect_url(shortId: str):
-    url = await redis_client.get(shortId)
-    if not url:
+    try:
+        (key, meta, bins) = client.get(('url_shortener', 'links', shortId))
+        # Обновление TTL
+        client.put(
+            ('url_shortener', 'links', shortId),
+            {'original_url': bins['original_url']},
+            meta={'ttl': LINK_TTL_SECONDS}
+        )
+        return RedirectResponse(bins['original_url'])
+    except aerospike.exception.RecordNotFoundError:  # type: ignore
         raise HTTPException(status_code=404, detail="Link not found")
-
-    # Обновление TTL при обращении
-    await redis_client.expire(shortId, LINK_TTL_SECONDS)
-
-    return RedirectResponse(url)

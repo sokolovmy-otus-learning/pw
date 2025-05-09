@@ -1,43 +1,80 @@
 services:
   link-service:
     build:
-      context: ./link_service
+      context: ./link-service
       dockerfile: Dockerfile
     environment:
       - LINK_TTL_SECONDS=86400
       - UVICORN_WORKERS=4
       - ROOT_PATH=/api
       - PORT=8000
-      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_HOSTS=aerospike
+      - AEROSPIKE_PORT=3000
+      - AEROSPIKE_NAMESPACE=links
     depends_on:
-      - aerospike
+      aerospike:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request, os; urllib.request.urlopen(\"http://localhost:\" + os.getenv(\"PORT\") + \"/health-status\").read()'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 1s
     networks:
       - app-network
 
   redirect-service:
     build:
-      context: ./redirect_service
+      context: ./redirect-service
       dockerfile: Dockerfile
     environment:
       - LINK_TTL_SECONDS=86400
       - UVICORN_WORKERS=4
       - PORT=8001
-      - AEROSPIKE_HOST=aerospike
+      - AEROSPIKE_HOSTS=aerospike
+      - AEROSPIKE_PORT=3000
+      - AEROSPIKE_NAMESPACE=links
     depends_on:
-      - aerospike
+      aerospike:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request, os; urllib.request.urlopen(\"http://localhost:\" + os.getenv(\"PORT\") + \"/health-status\").read()'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 1s
     networks:
       - app-network
 
+
   aerospike:
-    image: aerospike/aerospike-server:7.0
+    # image: aerospike/aerospike-server:8.0.0.7_1
+    image: aerospike:ce-8.0.0.7_1
+    environment:
+      - NAMESPACE=links
+      - SERVICE_PORT=3000
+      # - NETWORK_PORT=3001
+      # - HEARTBEAT_PORT=3002
+      # - INFO_PORT=3003
+      # - AEROSPIKE_CONFIG=/etc/aerospike/aerospike.conf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "asinfo", "-v", "service"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 3s
+
     container_name: aerospike
     volumes:
       - aerospike-data:/opt/aerospike/data
-      - ./aerospike/aerospike.conf:/etc/aerospike/aerospike.conf:ro
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "3003:3003"
+    # ports:
+      # - "3000:3000"  # Client access
+      # - "3001:3001"  # Fabric
+      # - "3002:3002"  # Heartbeat
+      # - "3003:3003"  # Info
     networks:
       - app-network
 
@@ -48,9 +85,12 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./frontend:/usr/share/nginx/html:ro
+    restart: unless-stopped
     depends_on:
-      - link-service
-      - redirect-service
+      link-service:
+          condition: service_healthy
+      redirect-service:
+          condition: service_healthy
     networks:
       - app-network
 

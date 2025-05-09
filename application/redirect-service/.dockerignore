@@ -1,0 +1,53 @@
+# Игнорируем системные файлы
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.log
+*.sqlite3
+
+# Игнорируем виртуальные окружения
+venv/
+.venv/
+env/
+.env/
+ENV/
+*.egg-info/
+*.eggs/
+
+# Игнорируем конфигурации IDE
+.vscode/
+.idea/
+*.iml
+
+# Игнорируем файловые логи и данные
+logs/
+*.log
+*.db
+*.sqlite3
+*.bak
+*.swp
+
+# Игнорируем файлы Docker
+Dockerfile*
+docker-compose.yml
+.dockerignore
+
+# Игнорируем тестовые артефакты
+htmlcov/
+.coverage
+*.cover
+*.py,cover
+.tox/
+.nox/
+.cache/
+coverage.xml
+*.coveragerc
+
+# Игнорируем статические анализаторы
+.mypy_cache/
+.pyre/
+.pytype/
+.pylint.d/
+ruff_cache/
+

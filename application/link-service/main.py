@@ -24,7 +24,24 @@ app = FastAPI(root_path=ROOT_PATH)
 hosts = [(host.strip(), AEROSPIKE_PORT) for host in re.split(r'\s*,\s*', HOSTS_STR.strip()) if host.strip()]
 
 # Подключаемся к Aerospike
-client = Client({"hosts": hosts})
+client = Client({
+    "hosts": hosts,
+    "policies": {
+        "write": {
+            "total_timeout": 1000,
+            "max_retries": 2,
+            "retry": aerospike.POLICY_RETRY_ONCE,
+            "ttl": LINK_TTL_SECONDS
+        },
+        "read": {
+            "total_timeout": 1000,
+            "max_retries": 2,
+            "retry": aerospike.POLICY_RETRY_ONCE,
+            "read_touch_ttl_percent": -1
+        }
+    }
+})
+
 client.connect()
 
 class ShortenRequest(BaseModel):
@@ -47,10 +64,9 @@ def generate_short_id(length: int = 6) -> str:
 @app.post("/shorten", response_model=LinkResponse)
 async def shorten_url(request: ShortenRequest):
     short_id = generate_short_id()
-    write_policy = {"total_timeout": 1000, "max_retries": 2, "ttl": LINK_TTL_SECONDS}
     key = (NAMESPACE, "links", short_id)
     bins = {"originalUrl": str(request.url)}
-    client.put(key, bins, policy=write_policy)
+    client.put(key, bins)
     short_url = f"/{short_id}"
     return {"shortId": short_id, "shortUrl": short_url}
 

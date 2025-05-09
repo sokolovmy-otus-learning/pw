@@ -1,4 +1,28 @@
 services:
+
+  aerospike:
+    image: aerospike:ce-8.0.0.7_1
+    environment:
+      - NAMESPACE=links
+      - SERVICE_PORT=3000
+      # - NETWORK_PORT=3001
+      # - HEARTBEAT_PORT=3002
+      # - INFO_PORT=3003
+      # - AEROSPIKE_CONFIG=/etc/aerospike/aerospike.conf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "asinfo", "-v", "service"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 3s
+
+    container_name: aerospike
+    volumes:
+      - aerospike-data:/opt/aerospike/data
+    networks:
+      - app-network
+
   link-service:
     build:
       context: ./link-service
@@ -48,38 +72,25 @@ services:
     networks:
       - app-network
 
-
-  aerospike:
-    # image: aerospike/aerospike-server:8.0.0.7_1
-    image: aerospike:ce-8.0.0.7_1
-    environment:
-      - NAMESPACE=links
-      - SERVICE_PORT=3000
-      # - NETWORK_PORT=3001
-      # - HEARTBEAT_PORT=3002
-      # - INFO_PORT=3003
-      # - AEROSPIKE_CONFIG=/etc/aerospike/aerospike.conf
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "asinfo", "-v", "service"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 3s
-
-    container_name: aerospike
-    volumes:
-      - aerospike-data:/opt/aerospike/data
-    # ports:
-      # - "3000:3000"  # Client access
-      # - "3001:3001"  # Fabric
-      # - "3002:3002"  # Heartbeat
-      # - "3003:3003"  # Info
-    networks:
-      - app-network
+  frontend-service:
+      build:
+        context: ./frontend-service
+        dockerfile: Dockerfile
+      environment:
+        - API_SHORTEN_URI=/api/shorten
+      restart: unless-stopped
+      ports:
+        - "9000:9000"
+      depends_on:
+        link-service:
+          condition: service_healthy
+        redirect-service:
+          condition: service_healthy
+      networks:
+        - app-network
 
   nginx:
-    image: nginx:1.26.0
+    image: nginx:1.28.0-alpine-slim
     ports:
       - "80:80"
     volumes:
@@ -91,6 +102,8 @@ services:
           condition: service_healthy
       redirect-service:
           condition: service_healthy
+      frontend-service:
+          condition: service_started
     networks:
       - app-network
 

@@ -20,7 +20,17 @@ HOSTS_STR = os.getenv("AEROSPIKE_HOSTS", "aerospike")
 hosts = [(host.strip(), AEROSPIKE_PORT) for host in re.split(r'\s*,\s*', HOSTS_STR.strip()) if host.strip()]
 
 # Подключаемся к Aerospike
-client = Client({"hosts": hosts})
+client = Client({
+    "hosts": hosts,
+    "policies": {
+        "read": {
+            "total_timeout": 1000,
+            "max_retries": 2,
+            "retry": aerospike.POLICY_RETRY_ONCE,
+            "read_touch_ttl_percent": 100
+        }
+    }
+})
 client.connect()
 
 @app.get("/health-status")
@@ -37,8 +47,6 @@ async def redirect(short_id: str):
     try:
         (key, meta, bins) = client.get(key)
         original_url = bins["originalUrl"]
-        write_policy = {"total_timeout": 1000, "max_retries": 2, "ttl": LINK_TTL_SECONDS}
-        client.put(key, bins, policy=write_policy)
         return RedirectResponse(url=original_url)
     except aerospike.exception.RecordNotFound:  # type: ignore
         raise HTTPException(status_code=404, detail="Link not found")

@@ -1,12 +1,12 @@
 services:
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "9090:9090"
-    restart: unless-stopped
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #   ports:
+  #     - "9090:9090"
+  #   restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.5.0
     container_name: loki
     # ports:
     #   - "3100:3100"
@@ -33,29 +33,51 @@ services:
     restart: unless-stopped
 
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:3.5.0
     container_name: promtail
     volumes:
+
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/log:/var/log
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./promtail-config.yml:/etc/promtail/config.yml:ro
     command: -config.file=/etc/promtail/config.yml
     restart: unless-stopped
     depends_on:
       - loki
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
-    command:
-      - --docker_only
+  # cadvisor:
+  #   image: gcr.io/cadvisor/cadvisor:latest
+  #   container_name: cadvisor
+  #   command:
+  #     - --docker_only
+  #   volumes:
+  #     - /:/rootfs:ro
+  #     - /var/run:/var/run:ro
+  #     - /sys:/sys:ro
+  #     - /var/lib/docker/:/var/lib/docker:ro
+  #     - /var/lib/docker/image/:/var/lib/docker/image/:ro
+  #     - /var/lib/docker/overlay2:/var/lib/docker/overlay2:ro
+  #   restart: unless-stopped
+
+  victoria-metrics:
+    image: victoriametrics/victoria-metrics:v1.117.0
+    container_name: victoria-metrics
+    ports:
+      - "8428:8428" # HTTP-интерфейс VictoriaMetrics
+    restart: unless-stopped
+
+  vmagent:
+    image: victoriametrics/vmagent:v1.117.0
+    container_name: vmagent
+    ports:
+      - "8429:8429" # HTTP-интерфейс vmagent
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /var/lib/docker/image/:/var/lib/docker/image/:ro
-      - /var/lib/docker/overlay2:/var/lib/docker/overlay2:ro
+      - ./vmagent-config.yml:/etc/vmagent-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - -promscrape.config=/etc/vmagent-config.yml
+      - -remoteWrite.url=http://victoria-metrics:8428/api/v1/write
     restart: unless-stopped
 
 volumes:

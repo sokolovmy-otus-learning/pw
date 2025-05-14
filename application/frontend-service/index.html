@@ -74,7 +74,8 @@
         });
 
         function copyToClipboard(url, button) {
-            navigator.clipboard.writeText(url).then(() => {
+
+            function copied(button) {
                 const icon = button.querySelector('svg');
                 icon.innerHTML = `
                     <path d="M5 13l4 4L19 7"></path>
@@ -89,7 +90,27 @@
                     icon.classList.remove('text-[#FBBC05]', 'dark:text-[#FDD663]');
                     icon.classList.add('w-5', 'h-5', 'text-[#4285F4]', 'dark:text-[#8AB4F8]');
                 }, 2000);
-            });
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => {
+                    copied(button);
+                });
+            } else {
+                const textarea = document.createElement("textarea");
+                textarea.value = url;
+                textarea.style.position = "fixed";
+                textarea.style.opacity = 0;
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                try {
+                    document.execCommand("copy");
+                    copied(button)
+                } finally {
+                    document.body.removeChild(textarea);
+                }
+            }
         }
     </script>
 </body>

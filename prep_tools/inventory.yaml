@@ -1,0 +1,14 @@
+all:
+  hosts:
+    debian-docker:
+      ansible_host: 192.168.105.250
+      ansible_user: smy
+    debian-docker-02:
+      ansible_host: 192.168.105.183
+      ansible_user: smy
+    debian-docker-03:
+      ansible_host: 192.168.105.123
+      ansible_user: smy
+    debian-kube:
+      ansible_host: 192.168.1.140
+      ansible_user: smy

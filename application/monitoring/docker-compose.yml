@@ -15,7 +15,7 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      # - grafana-data:/var/lib/grafana
+      - grafana-data:/var/lib/grafana
       - ./provisioning:/etc/grafana/provisioning
     ports:
       - "3000:3000"
@@ -81,7 +81,7 @@ services:
   #   restart: unless-stopped
 
 volumes:
-  # grafana-data:
-  #   driver: local
+  grafana-data:
+    driver: local
   loki-data:
     driver: local

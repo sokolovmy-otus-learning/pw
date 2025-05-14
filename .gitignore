@@ -4,3 +4,6 @@
 *.pyc
 *.pyo
 *.pyd
+
+frontend-new
+frontend-new/*

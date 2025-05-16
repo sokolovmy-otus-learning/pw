@@ -1,0 +1,117 @@
+version: "3.8"
+services:
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    user: root
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+        mode: 0444
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "9090:9090"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == debian-docker01
+      restart_policy:
+        condition: on-failure
+    networks:
+      - monitoring-net
+
+  grafana:
+    image: grafana/grafana:11.6.1
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - /home/smy/pw/monitoring/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == debian-docker01
+      restart_policy:
+        condition: on-failure
+    networks:
+      - monitoring-net
+
+  loki:
+    image: grafana/loki:3.5.0
+    configs:
+      - source: loki_config
+        target: /etc/loki/local-config.yaml
+        mode: 0444
+    volumes:
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    # ports:
+    #   - "3100:3100"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == debian-docker-02
+      restart_policy:
+        condition: on-failure
+    networks:
+      - monitoring-net
+
+  promtail:
+    image: grafana/promtail:3.5.0
+    configs:
+      - source: promtail_config
+        target: /etc/promtail/config.yml
+        mode: 0444
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - loki
+    networks:
+      - monitoring-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    hostname: cadvisor1
+    command:
+      - --docker_only
+      - --port=8080
+    expose:
+      - "8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    networks:
+      - monitoring-net
+
+
+networks:
+  monitoring-net:
+    driver: overlay
+
+volumes:
+  grafana-data:
+  loki-data:
+
+configs:
+  prometheus_config:
+    file: ./prometheus-swarm.yml
+  loki_config:
+    file: ./loki-config.yml
+  promtail_config:
+    file: ./promtail-config.yml

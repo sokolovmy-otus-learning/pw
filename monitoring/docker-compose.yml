@@ -60,26 +60,6 @@ services:
       - /var/lib/docker/overlay2:/var/lib/docker/overlay2:ro
     restart: unless-stopped
 
-  # victoria-metrics:
-  #   image: victoriametrics/victoria-metrics:v1.117.0
-  #   container_name: victoria-metrics
-  #   ports:
-  #     - "8428:8428" # HTTP-интерфейс VictoriaMetrics
-  #   restart: unless-stopped
-
-  # vmagent:
-  #   image: victoriametrics/vmagent:v1.117.0
-  #   container_name: vmagent
-  #   ports:
-  #     - "8429:8429" # HTTP-интерфейс vmagent
-  #   volumes:
-  #     - ./vmagent-config.yml:/etc/vmagent-config.yml:ro
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #   command:
-  #     - -promscrape.config=/etc/vmagent-config.yml
-  #     - -remoteWrite.url=http://victoria-metrics:8428/api/v1/write
-  #   restart: unless-stopped
-
 volumes:
   grafana-data:
     driver: local

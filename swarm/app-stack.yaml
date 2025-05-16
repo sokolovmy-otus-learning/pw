@@ -1,53 +1,73 @@
 services:
 
+  aerospike-node1:
+    image: aerospike:ce-8.0.0.7_1
+    networks:
+      - app-swarm-net
+    volumes:
+      - aerospike-data1:/opt/aerospike/data
+    configs:
+      - source: aerospike_config
+        target: /etc/aerospike/aerospike.conf
+    hostname: aerospike-node1
+    entrypoint: /usr/bin/asd --config-file /etc/aerospike/aerospike.conf --foreground
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == debian-docker01
+
+
+  aerospike-node2:
+    image: aerospike:ce-8.0.0.7_1
+    networks:
+      - app-swarm-net
+    volumes:
+      - aerospike-data2:/opt/aerospike/data
+    configs:
+      - source: aerospike_config
+        target: /etc/aerospike/aerospike.conf
+    hostname: aerospike-node2
+    entrypoint: /usr/bin/asd --config-file /etc/aerospike/aerospike.conf --foreground
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == debian-docker-02
+
   link-service:
-    build:
-      context: ../application/link-service
-      dockerfile: Dockerfile
+    image: holse/link-service:latest
     environment:
       - LINK_TTL_SECONDS=86400
       - UVICORN_WORKERS=4
       - ROOT_PATH=/api
       - PORT=8000
-      - AEROSPIKE_HOSTS=aerospike-node1,aerospike-node2,aerospike-node3
+      - AEROSPIKE_HOSTS=aerospike-node1,aerospike-node2
       - AEROSPIKE_PORT=3000
       - AEROSPIKE_NAMESPACE=links
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request, os; urllib.request.urlopen(\"http://localhost:\" + os.getenv(\"PORT\") + \"/health-status\").read()'"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 1s
     networks:
       - app-swarm-net
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 2
       placement:
         max_replicas_per_node: 1
       resources:
         limits:
           cpus: '0.5'
           memory: 128M
+    depends_on:
+      - aerospike-node1
+      - aerospike-node2
 
   redirect-service:
-    build:
-      context: ../application/redirect-service
-      dockerfile: Dockerfile
+    image: holse/redirect-service:latest
     environment:
       - UVICORN_WORKERS=4
       - PORT=8001
-      - AEROSPIKE_HOSTS=aerospike-node1,aerospike-node2,aerospike-node3
+      - AEROSPIKE_HOSTS=aerospike-node1,aerospike-node2
       - AEROSPIKE_PORT=3000
       - AEROSPIKE_NAMESPACE=links
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request, os; urllib.request.urlopen(\"http://localhost:\" + os.getenv(\"PORT\") + \"/health-status\").read()'"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 1s
     networks:
       - app-swarm-net
     deploy:
@@ -59,24 +79,21 @@ services:
         limits:
           cpus: '0.5'
           memory: 128M
+    depends_on:
+      - aerospike-node1
+      - aerospike-node2
+
 
   frontend-service:
-      build:
-        context: ../application/frontend-service
-        dockerfile: Dockerfile
+      image: holse/frontend-service:latest
       environment:
         - API_SHORTEN_URI=/api/shorten
       restart: unless-stopped
-      depends_on:
-        link-service:
-          condition: service_healthy
-        redirect-service:
-          condition: service_healthy
       networks:
         - app-swarm-net
       deploy:
         mode: replicated
-        replicas: 3
+        replicas: 1
         placement:
           max_replicas_per_node: 1
         resources:
@@ -88,28 +105,31 @@ services:
     image: nginx:1.28.0-alpine-slim
     ports:
       - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend:/usr/share/nginx/html:ro
+    configs:
+      - source: nginx_conf
+        target: /etc/nginx/nginx.conf
     restart: unless-stopped
-    depends_on:
-      link-service:
-          condition: service_healthy
-      redirect-service:
-          condition: service_healthy
-      frontend-service:
-          condition: service_started
     networks:
       - app-swarm-net
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 1
       placement:
         max_replicas_per_node: 1
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
+    depends_on:
+      - link-service
+      - redirect-service
+      - frontend-service
+
+configs:
+  nginx_conf:
+    file: ../application/nginx/nginx.conf
+  aerospike_config:
+    file: ./aerospike.conf
 
 networks:
   app-swarm-net:
+
+volumes:
+  aerospike-data1:
+  aerospike-data2:

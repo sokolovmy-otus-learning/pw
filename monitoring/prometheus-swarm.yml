@@ -13,6 +13,8 @@ scrape_configs:
         filters:
           - name: service
             values: [mon_cadvisor]
+          - name: desired-state
+            values: [running]
         port: 8080
     relabel_configs:
       - source_labels: [__meta_dockerswarm_task_container_id]

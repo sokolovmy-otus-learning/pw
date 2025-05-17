@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: aerospike
+  namespace: aerospike
+spec:
+  serviceName: aerospike
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aerospike
+  template:
+    metadata:
+      labels:
+        app: aerospike
+    spec:
+      containers:
+      - name: aerospike
+        image: aerospike:ce-8.0.0.7_1
+        command: ["/usr/bin/asd"]
+        args: ["--config-file", "/etc/aerospike/aerospike.conf", "--foreground"]
+
+        ports:
+        - containerPort: 3000
+          name: service
+        volumeMounts:
+        - name: data
+          mountPath: /opt/aerospike/data
+        - name: config
+          mountPath: /etc/aerospike/aerospike.conf
+          subPath: aerospike.conf
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: aerospike-config

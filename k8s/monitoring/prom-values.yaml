@@ -1,0 +1,11 @@
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: false
+  forceDeployDatasources: true
+  forceDeployDashboards: true
+  sidecar:
+    datasources:
+      alertmanager:
+        enabled: false
